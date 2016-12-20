@@ -123,7 +123,7 @@ struct xcb_colors_t colors;
 static const int ws_hoff_px = 4;
 
 /* Vertical offset between a workspace label and button borders */
-static const int ws_voff_px = 3;
+static const int ws_voff_px = 0;
 
 /* Offset between two workspace buttons */
 static const int ws_spacing_px = 1;
@@ -170,28 +170,18 @@ int get_tray_width(struct tc_head *trayclients) {
  * Draws a separator for the given block if necessary.
  *
  */
-static void draw_separator(i3_output *output, uint32_t x, struct status_block *block, bool use_focus_colors) {
-    color_t sep_fg = (use_focus_colors ? colors.focus_sep_fg : colors.sep_fg);
-    color_t bar_bg = (use_focus_colors ? colors.focus_bar_bg : colors.bar_bg);
+static void draw_separator(i3_output *output, uint32_t x, struct status_block *block, i3String *sep, color_t fg_color, color_t bg_color) {
 
     uint32_t sep_offset = get_sep_offset(block);
     if (TAILQ_NEXT(block, blocks) == NULL || sep_offset == 0)
         return;
 
     uint32_t center_x = x - sep_offset;
-    if (config.separator_symbol == NULL) {
-        /* Draw a classic one pixel, vertical separator. */
-        draw_util_rectangle(xcb_connection, &output->statusline_buffer, sep_fg,
-                            center_x,
-                            logical_px(sep_voff_px),
-                            logical_px(1),
-                            bar_height - 2 * logical_px(sep_voff_px));
-    } else {
-        /* Draw a custom separator. */
-        uint32_t separator_x = MAX(x - block->sep_block_width, center_x - separator_symbol_width / 2);
-        draw_util_text(config.separator_symbol, &output->statusline_buffer, sep_fg, bar_bg,
-                       separator_x, logical_px(ws_voff_px), x - separator_x);
-    }
+    uint32_t separator_x = MAX(x - block->sep_block_width, center_x - separator_symbol_width / 2);
+    draw_util_rectangle(xcb_connection, &output->statusline_buffer, bg_color,
+                        separator_x, 0, x - separator_x, bar_height);
+    draw_util_text(sep, &output->statusline_buffer, fg_color, bg_color,
+                    separator_x, logical_px(ws_voff_px), x - separator_x);
 }
 
 uint32_t predict_statusline_length(bool use_short_text) {
@@ -243,6 +233,18 @@ uint32_t predict_statusline_length(bool use_short_text) {
     return width;
 }
 
+color_t get_block_color(struct status_block *block, color_t def){
+    if (block->background || block->urgent) {
+        if (block->urgent) {
+            return  colors.urgent_ws_bg;
+        } else {
+            if (block->background)
+                return draw_util_hex_to_color(block->background);
+        }
+    }
+    return def;
+}
+
 /*
  * Redraws the statusline to the output's statusline_buffer
  */
@@ -283,35 +285,18 @@ void draw_statusline(i3_output *output, uint32_t clip_left, bool use_focus_color
             fg_color = colors.bar_fg;
         }
 
-        color_t bg_color = bar_color;
+        color_t bg_color = get_block_color(block, bar_color);
 
         int border_width = (block->border) ? logical_px(1) : 0;
         int full_render_width = render->width + render->x_offset + render->x_append;
-        if (block->border || block->background || block->urgent) {
-            /* Let's determine the colors first. */
-            color_t border_color = bar_color;
-            if (block->urgent) {
-                border_color = colors.urgent_ws_border;
-                bg_color = colors.urgent_ws_bg;
-            } else {
-                if (block->border)
-                    border_color = draw_util_hex_to_color(block->border);
-                if (block->background)
-                    bg_color = draw_util_hex_to_color(block->background);
-            }
-
-            /* Draw the border. */
-            draw_util_rectangle(xcb_connection, &output->statusline_buffer, border_color,
-                                x, logical_px(1),
-                                full_render_width,
-                                bar_height - logical_px(2));
+        if (memcmp(&bg_color, &bar_color, sizeof(bg_color))){
 
             /* Draw the background. */
             draw_util_rectangle(xcb_connection, &output->statusline_buffer, bg_color,
                                 x + border_width,
-                                logical_px(1) + border_width,
+                                0,
                                 full_render_width - 2 * border_width,
-                                bar_height - 2 * border_width - logical_px(2));
+                                bar_height);
         }
 
         draw_util_text(text, &output->statusline_buffer, fg_color, bg_color,
@@ -322,7 +307,12 @@ void draw_statusline(i3_output *output, uint32_t clip_left, bool use_focus_color
         /* If this is not the last block, draw a separator. */
         if (TAILQ_NEXT(block, blocks) != NULL) {
             x += block->sep_block_width;
-            draw_separator(output, x, block, use_focus_colors);
+            if(x < output->statusline_width / 2){
+                //config.separator_symbol
+                draw_separator(output, x, block, i3string_from_utf8(""), bg_color, get_block_color(TAILQ_NEXT(block, blocks), bar_color));
+            }else{
+                draw_separator(output, x, block, i3string_from_utf8(""), get_block_color(TAILQ_NEXT(block, blocks), bar_color), bg_color);
+            }
         }
     }
 }
