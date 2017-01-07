@@ -146,13 +146,6 @@ int _xcb_request_failed(xcb_void_cookie_t cookie, char *err_msg, int line) {
     }
     return 0;
 }
-
-uint32_t get_sep_offset(struct status_block *block) {
-    if (!block->no_separator && block->sep_block_width > 0)
-        return block->sep_block_width / 2 + block->sep_block_width % 2;
-    return 0;
-}
-
 int get_tray_width(struct tc_head *trayclients) {
     trayclient *trayclient;
     int tray_width = 0;
@@ -166,154 +159,131 @@ int get_tray_width(struct tc_head *trayclients) {
     return tray_width;
 }
 
-/*
- * Draws a separator for the given block if necessary.
- *
+/* 
+ * Draws one block of the statusline, x pixels fromthe edge. Will put triangular
+ * caps on the front or back if tail or head true. 
  */
-static void draw_separator(i3_output *output, uint32_t x, struct status_block *block, i3String *sep, color_t fg_color, color_t bg_color) {
+void draw_one_block(i3_output *output, uint32_t x, struct status_block *block, bool head, bool tail, bool use_focus_colors){ 
+    color_t bar_color = (use_focus_colors ? colors.focus_bar_bg : colors.bar_bg); 
+    color_t fg_color;
+    color_t bg_color = bar_color;
+    if (block->urgent) {
+        fg_color = colors.urgent_ws_fg;
+    } else if (block->color) {
+        fg_color = draw_util_hex_to_color(block->color);
+    } else if (use_focus_colors) {
+        fg_color = colors.focus_bar_fg;
+    } else {
+        fg_color = colors.bar_fg;
+    }
+    if (block->urgent) {
+        bg_color = colors.urgent_ws_bg;
+    } else if (block->background) {
+        bg_color = draw_util_hex_to_color(block->background);
+    } else {
+        bg_color = colors.bar_fg;
+    }
 
-    uint32_t sep_offset = get_sep_offset(block);
-    if (TAILQ_NEXT(block, blocks) == NULL || sep_offset == 0)
-        return;
-
-    uint32_t center_x = x - sep_offset;
-    uint32_t separator_x = MAX(x - block->sep_block_width, center_x - separator_symbol_width / 2);
+    /* Draw the background. */
     draw_util_rectangle(xcb_connection, &output->statusline_buffer, bg_color,
-                        separator_x, 0, x - separator_x, bar_height);
-    draw_util_text(sep, &output->statusline_buffer, fg_color, bg_color,
-                    separator_x, logical_px(ws_voff_px), x - separator_x);
-}
-
-uint32_t predict_statusline_length(bool use_short_text) {
-    uint32_t width = 0;
-    struct status_block *block;
-
-    TAILQ_FOREACH(block, &statusline_head, blocks) {
-        i3String *text = block->full_text;
-        struct status_block_render_desc *render = &block->full_render;
-        if (use_short_text && block->short_text != NULL) {
-            text = block->short_text;
-            render = &block->short_render;
+                        x,                   0,
+                        block->actual_width, bar_height);
+    color_t arrow_color = bg_color;
+    if(block->fill && block->fill_color){
+        color_t fill_color = draw_util_hex_to_color(block->fill_color);
+        if(block->fill == (1<<16)){
+            arrow_color = fill_color;
         }
-
-        if (i3string_get_num_bytes(text) == 0)
-            continue;
-
-        render->width = predict_text_width(text);
-        if (block->border)
-            render->width += logical_px(2);
-
-        /* Compute offset and append for text aligment in min_width. */
-        if (block->min_width <= render->width) {
-            render->x_offset = 0;
-            render->x_append = 0;
-        } else {
-            uint32_t padding_width = block->min_width - render->width;
-            switch (block->align) {
-                case ALIGN_LEFT:
-                    render->x_append = padding_width;
-                    break;
-                case ALIGN_RIGHT:
-                    render->x_offset = padding_width;
-                    break;
-                case ALIGN_CENTER:
-                    render->x_offset = padding_width / 2;
-                    render->x_append = padding_width / 2 + padding_width % 2;
-                    break;
-            }
+        uint32_t start;
+        uint32_t width = block->fill * block->actual_width / (1<<16);
+        if(!head){
+            start = x;
+        }else if(tail){
+            start = x + (block->actual_width - width)/2;//centered
+        }else{
+            start = x + block->actual_width - width;
         }
-
-        width += render->width + render->x_offset + render->x_append;
-
-        /* If this is not the last block, add some pixels for a separator. */
-        if (TAILQ_NEXT(block, blocks) != NULL)
-            width += block->sep_block_width;
+        draw_util_rectangle(xcb_connection, &output->statusline_buffer, fill_color,
+                            start, 0, width, bar_height);
     }
 
-    return width;
-}
+    uint32_t arrow_width = predict_text_width(i3string_from_utf8(""));
+    if(head){
+        draw_util_text(i3string_from_utf8(""), &output->statusline_buffer, 
+                        arrow_color, fg_color, //fg_color is ignored
+                        x-arrow_width, 0, arrow_width);
+    }
+    if(tail){
+        draw_util_text(i3string_from_utf8(""), &output->statusline_buffer, 
+                        arrow_color, fg_color, //fg_color is ignored
+                        x+block->actual_width, 0, x + block->actual_width + arrow_width);
+    }
 
-color_t get_block_color(struct status_block *block, color_t def){
-    if (block->background || block->urgent) {
-        if (block->urgent) {
-            return  colors.urgent_ws_bg;
-        } else {
-            if (block->background)
-                return draw_util_hex_to_color(block->background);
+    uint32_t text_width = predict_text_width(block->full_text);
+    int width;
+    if(text_width > block->actual_width && (!tail || !head)){
+        if(!head && tail){
+            x -= text_width - block->actual_width;
+            width = text_width;
+        }else if(head && !tail){
+            width = text_width;
+        }else{
+            width = block->actual_width;
+        }
+    }else{
+        width = text_width;
+        switch (block->align) {
+            case ALIGN_LEFT:
+                break;
+            case ALIGN_RIGHT:
+                x -= text_width - block->actual_width;
+                break;
+            case ALIGN_CENTER:
+                x += (block->actual_width - text_width)/2;
+                break;
         }
     }
-    return def;
+    draw_util_text(block->full_text, &output->statusline_buffer, fg_color, bg_color,
+                    x, logical_px(ws_voff_px), width);
 }
 
 /*
  * Redraws the statusline to the output's statusline_buffer
  */
-void draw_statusline(i3_output *output, uint32_t clip_left, bool use_focus_colors, bool use_short_text) {
+void draw_statusline(i3_output *output, uint32_t width, bool use_focus_colors) {
     struct status_block *block;
 
     color_t bar_color = (use_focus_colors ? colors.focus_bar_bg : colors.bar_bg);
     draw_util_clear_surface(xcb_connection, &output->statusline_buffer, bar_color);
 
-    /* Use unsigned integer wraparound to clip off the left side.
-     * For example, if clip_left is 75, then x will start at the very large
-     * number INT_MAX-75, which is way outside the surface dimensions. Drawing
-     * to that x position is a no-op which XCB and Cairo safely ignore. Once x moves
-     * up by 75 and goes past INT_MAX, it will wrap around again to 0, and we start
-     * actually rendering content to the surface. */
-    uint32_t x = 0 - clip_left;
+    uint32_t x = 0;
+    int i = 0; 
+    int backto = 0;
 
-    /* Draw the text of each block */
+    /*Iterate over each block. When traveling "up" (each block is above the
+     * previous), draw the blocks in first pass. If travelling down, go to the
+     * bottom first, then come back up. */
     TAILQ_FOREACH(block, &statusline_head, blocks) {
-        i3String *text = block->full_text;
-        struct status_block_render_desc *render = &block->full_render;
-        if (use_short_text && block->short_text != NULL) {
-            text = block->short_text;
-            render = &block->short_render;
-        }
+        if(!block->above){
+            draw_one_block(output, x, block, backto == i, false, use_focus_colors);
+            struct status_block *back_block = block;
+            int bi = i;
+            int bx = x;
+            while(bi > backto){
+                back_block = TAILQ_PREV(back_block, statusline_head, blocks);
+                bi --;
+                bx -= back_block->actual_width;
+                
+                /* no_seperator only affects triangle to the right of a block.
+                 * It therefore only works when that block is above the block
+                 * to its right. */
 
-        if (i3string_get_num_bytes(text) == 0)
-            continue;
-
-        color_t fg_color;
-        if (block->urgent) {
-            fg_color = colors.urgent_ws_fg;
-        } else if (block->color) {
-            fg_color = draw_util_hex_to_color(block->color);
-        } else if (use_focus_colors) {
-            fg_color = colors.focus_bar_fg;
-        } else {
-            fg_color = colors.bar_fg;
-        }
-
-        color_t bg_color = get_block_color(block, bar_color);
-
-        int border_width = (block->border) ? logical_px(1) : 0;
-        int full_render_width = render->width + render->x_offset + render->x_append;
-        if (memcmp(&bg_color, &bar_color, sizeof(bg_color))){
-
-            /* Draw the background. */
-            draw_util_rectangle(xcb_connection, &output->statusline_buffer, bg_color,
-                                x + border_width,
-                                0,
-                                full_render_width - 2 * border_width,
-                                bar_height);
-        }
-
-        draw_util_text(text, &output->statusline_buffer, fg_color, bg_color,
-                       x + render->x_offset + border_width, logical_px(ws_voff_px),
-                       render->width - 2 * border_width);
-        x += full_render_width;
-
-        /* If this is not the last block, draw a separator. */
-        if (TAILQ_NEXT(block, blocks) != NULL) {
-            x += block->sep_block_width;
-            if(x < output->statusline_width / 2){
-                //config.separator_symbol
-                draw_separator(output, x, block, i3string_from_utf8(""), bg_color, get_block_color(TAILQ_NEXT(block, blocks), bar_color));
-            }else{
-                draw_separator(output, x, block, i3string_from_utf8(""), get_block_color(TAILQ_NEXT(block, blocks), bar_color), bg_color);
+                draw_one_block(output, bx, back_block, bi == backto && bi > 0, !back_block->no_separator, use_focus_colors);
             }
+            backto = i+1;
         }
+        x += block->actual_width;
+        i++;
     }
 }
 
@@ -482,25 +452,13 @@ void handle_button(xcb_button_press_event_t *event) {
             int sep_offset_remainder = 0;
 
             TAILQ_FOREACH(block, &statusline_head, blocks) {
-                i3String *text = block->full_text;
-                struct status_block_render_desc *render = &block->full_render;
-                if (walk->statusline_short_text && block->short_text != NULL) {
-                    text = block->short_text;
-                    render = &block->short_render;
-                }
-
-                if (i3string_get_num_bytes(text) == 0)
-                    continue;
-
                 last_block_x = block_x;
-                block_x += render->width + render->x_offset + render->x_append + get_sep_offset(block) + sep_offset_remainder;
+                block_x += block->actual_width;
 
                 if (statusline_x <= block_x && statusline_x >= last_block_x) {
                     send_block_clicked(event->detail, block->name, block->instance, event->root_x, event->root_y);
                     return;
                 }
-
-                sep_offset_remainder = block->sep_block_width - get_sep_offset(block);
             }
         }
     }
@@ -1914,8 +1872,20 @@ void reconfig_windows(bool redraw_bars) {
 void draw_bars(bool unhide) {
     DLOG("Drawing bars...\n");
 
-    uint32_t full_statusline_width = predict_statusline_length(false);
-    uint32_t short_statusline_width = predict_statusline_length(true);
+    struct status_block *block;
+
+    int num_variable_blocks = 0;
+    int num_non_variable_blocks = 0;
+    uint32_t forced_width = 0;
+
+    TAILQ_FOREACH(block, &statusline_head, blocks) {
+        if(block->width == 0){
+            num_variable_blocks += 1;
+        }else{
+            num_non_variable_blocks += 1;
+            forced_width += block->width;
+        }
+    }
 
     i3_output *outputs_walk;
     SLIST_FOREACH(outputs_walk, outputs, slist) {
@@ -2019,28 +1989,39 @@ void draw_bars(bool unhide) {
             DLOG("Printing statusline!\n");
 
             int tray_width = get_tray_width(outputs_walk->trayclients);
-            uint32_t max_statusline_width = outputs_walk->rect.w - workspace_width - tray_width - 2 * logical_px(sb_hoff_px);
-            uint32_t clip_left = 0;
-            uint32_t statusline_width = full_statusline_width;
-            bool use_short_text = false;
+            uint32_t max_statusline_width = outputs_walk->rect.w - workspace_width - tray_width;
 
-            if (statusline_width > max_statusline_width) {
-                statusline_width = short_statusline_width;
-                use_short_text = true;
-                if (statusline_width > max_statusline_width) {
-                    clip_left = statusline_width - max_statusline_width;
+            int space = max_statusline_width - forced_width;
+            if (forced_width > max_statusline_width) {
+                space = 0;
+            }
+            int space_per_var, rem_space, var;
+            if(num_variable_blocks){
+                space_per_var = space / num_variable_blocks;
+                rem_space = space % num_variable_blocks;
+                var = 0;
+            }
+
+            TAILQ_FOREACH(block, &statusline_head, blocks) {
+                if(block->width == 0){
+                    block->actual_width = space_per_var + (var < rem_space ? 1 : 0);
+                    var ++;
+                }else{
+                    if(forced_width > max_statusline_width){
+                        block->actual_width = (block->width * forced_width) / max_statusline_width;
+                    }else{
+                        block->actual_width = block->width;
+                    }
                 }
             }
 
-            int16_t visible_statusline_width = MIN(statusline_width, max_statusline_width);
-            int x_dest = outputs_walk->rect.w - tray_width - logical_px(sb_hoff_px) - visible_statusline_width;
+            int x_dest = outputs_walk->rect.w - tray_width - max_statusline_width;
 
-            draw_statusline(outputs_walk, clip_left, use_focus_colors, use_short_text);
+            draw_statusline(outputs_walk, max_statusline_width, use_focus_colors);
             draw_util_copy_surface(xcb_connection, &outputs_walk->statusline_buffer, &outputs_walk->buffer, 0, 0,
-                                   x_dest, 0, visible_statusline_width, (int16_t)bar_height);
+                                   x_dest, 0, max_statusline_width, (int16_t)bar_height);
 
-            outputs_walk->statusline_width = statusline_width;
-            outputs_walk->statusline_short_text = use_short_text;
+            outputs_walk->statusline_width = max_statusline_width;
         }
     }
 

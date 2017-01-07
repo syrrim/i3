@@ -70,11 +70,9 @@ static void clear_statusline(struct statusline_head *head, bool free_resources) 
         first = TAILQ_FIRST(head);
         if (free_resources) {
             I3STRING_FREE(first->full_text);
-            I3STRING_FREE(first->short_text);
             FREE(first->color);
             FREE(first->name);
             FREE(first->instance);
-            FREE(first->min_width_str);
             FREE(first->background);
             FREE(first->border);
         }
@@ -165,11 +163,6 @@ static int stdin_start_map(void *context) {
     parser_ctx *ctx = context;
     memset(&(ctx->block), '\0', sizeof(struct status_block));
 
-    /* Default width of the separator block. */
-    if (config.separator_symbol == NULL)
-        ctx->block.sep_block_width = logical_px(9);
-    else
-        ctx->block.sep_block_width = logical_px(8) + separator_symbol_width;
 
     return 1;
 }
@@ -191,6 +184,10 @@ static int stdin_boolean(void *context, int val) {
         ctx->block.no_separator = !val;
         return 1;
     }
+    if (strcasecmp(ctx->last_map_key, "above") == 0) {
+        ctx->block.above = val;
+        return 1;
+    }
 
     return 1;
 }
@@ -201,16 +198,16 @@ static int stdin_string(void *context, const unsigned char *val, size_t len) {
         ctx->block.full_text = i3string_from_markup_with_length((const char *)val, len);
         return 1;
     }
-    if (strcasecmp(ctx->last_map_key, "short_text") == 0) {
-        ctx->block.short_text = i3string_from_markup_with_length((const char *)val, len);
-        return 1;
-    }
     if (strcasecmp(ctx->last_map_key, "color") == 0) {
         sasprintf(&(ctx->block.color), "%.*s", len, val);
         return 1;
     }
     if (strcasecmp(ctx->last_map_key, "background") == 0) {
         sasprintf(&(ctx->block.background), "%.*s", len, val);
+        return 1;
+    }
+    if (strcasecmp(ctx->last_map_key, "fill_color") == 0) {
+        sasprintf(&(ctx->block.fill_color), "%.*s", len, val);
         return 1;
     }
     if (strcasecmp(ctx->last_map_key, "border") == 0) {
@@ -231,10 +228,6 @@ static int stdin_string(void *context, const unsigned char *val, size_t len) {
         }
         return 1;
     }
-    if (strcasecmp(ctx->last_map_key, "min_width") == 0) {
-        sasprintf(&(ctx->block.min_width_str), "%.*s", len, val);
-        return 1;
-    }
     if (strcasecmp(ctx->last_map_key, "name") == 0) {
         sasprintf(&(ctx->block.name), "%.*s", len, val);
         return 1;
@@ -249,12 +242,14 @@ static int stdin_string(void *context, const unsigned char *val, size_t len) {
 
 static int stdin_integer(void *context, long long val) {
     parser_ctx *ctx = context;
-    if (strcasecmp(ctx->last_map_key, "min_width") == 0) {
-        ctx->block.min_width = (uint32_t)val;
+    if (strcasecmp(ctx->last_map_key, "width") == 0) {
+        i3String *text = i3string_from_utf8("M");
+        i3string_set_markup(text, ctx->block.pango_markup);
+        ctx->block.width = (uint32_t)predict_text_width(text) * (uint32_t)val;
         return 1;
     }
-    if (strcasecmp(ctx->last_map_key, "separator_block_width") == 0) {
-        ctx->block.sep_block_width = (uint32_t)val;
+    if (strcasecmp(ctx->last_map_key, "fill") == 0) { // expected to be percentage
+        ctx->block.fill = val * (1<<16) / 100;
         return 1;
     }
 
@@ -272,21 +267,28 @@ static int stdin_end_map(void *context) {
     /* Ensure we have a full_text set, so that when it is missing (or null),
      * i3bar doesn’t crash and the user gets an annoying message. */
     if (!new_block->full_text)
-        new_block->full_text = i3string_from_utf8("SPEC VIOLATION: full_text is NULL!");
-    if (new_block->urgent)
+        new_block->full_text = i3string_from_utf8("");
+    if(!i3string_get_num_bytes(new_block->full_text) && !new_block->width)
+        return 1;
+    if (new_block->urgent){
         ctx->has_urgent = true;
-
-    if (new_block->min_width_str) {
-        i3String *text = i3string_from_utf8(new_block->min_width_str);
-        i3string_set_markup(text, new_block->pango_markup);
-        new_block->min_width = (uint32_t)predict_text_width(text);
-        i3string_free(text);
     }
 
-    i3string_set_markup(new_block->full_text, new_block->pango_markup);
+	if(new_block->fill == 0 && new_block->fill_color){
+	    char * percent = i3string_as_utf8(new_block->full_text);
+	    while(*percent && *percent != '%'){
+	        percent ++;
+	    }
+        if(*percent){
+            do{
+                percent --;
+            }while(48 <= *percent && *percent < 58);
 
-    if (new_block->short_text != NULL)
-        i3string_set_markup(new_block->short_text, new_block->pango_markup);
+            new_block->fill = atoi(percent+1) * (1<<16) / 100;
+        }
+	}
+
+    i3string_set_markup(new_block->full_text, new_block->pango_markup);
 
     TAILQ_INSERT_TAIL(&statusline_buffer, new_block, blocks);
     return 1;
@@ -305,7 +307,6 @@ static int stdin_end_array(void *context) {
     struct status_block *current;
     TAILQ_FOREACH(current, &statusline_head, blocks) {
         DLOG("full_text = %s\n", i3string_as_utf8(current->full_text));
-        DLOG("short_text = %s\n", (current->short_text == NULL ? NULL : i3string_as_utf8(current->short_text)));
         DLOG("color = %s\n", current->color);
     }
     DLOG("end of dump\n");

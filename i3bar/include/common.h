@@ -41,34 +41,38 @@ struct status_block_render_desc {
     uint32_t x_append;
 };
 
+#define STATUS_BLOCK_MAX_FILL() (1<<16);
+
 /* This data structure represents one JSON dictionary, multiple of these make
  * up one status line. */
 struct status_block {
     i3String *full_text;
-    i3String *short_text;
 
     char *color;
     char *background;
     char *border;
 
-    /* min_width can be specified either as a numeric value (in pixels) or as a
-     * string. For strings, we set min_width to the measured text width of
-     * min_width_str. */
-    uint32_t min_width;
-    char *min_width_str;
+    /* The number of chars the block wants to take up. Set to zero to have it be
+     * variable.  */
+    uint32_t width;
+    /* The number of pixels allocated to the block on screen */
+    uint32_t actual_width;
+
+    /* Whether the block should be drawn above, rather than below, it's
+     * successor */
+    bool above;
 
     blockalign_t align;
+
+    /* Optionally, the background of the block can be partially filled to
+     * demonstrate a percentage. */
+    uint32_t fill; 
+    char *fill_color;
+
 
     bool urgent;
     bool no_separator;
     bool pango_markup;
-
-    /* The amount of pixels necessary to render a separater after the block. */
-    uint32_t sep_block_width;
-
-    /* Continuously-updated information on how to render this status block. */
-    struct status_block_render_desc full_render;
-    struct status_block_render_desc short_render;
 
     /* Optional */
     char *name;
