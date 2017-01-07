@@ -1991,9 +1991,6 @@ void draw_bars(bool unhide) {
             int tray_width = get_tray_width(outputs_walk->trayclients);
             uint32_t max_statusline_width = outputs_walk->rect.w - workspace_width - tray_width;
 
-            //FILE *fp = fopen("/home/cameron/i3bar-test", "w");
-            //fprintf(fp, "%d = %d - %d - %d\n", max_statusline_width, outputs_walk->rect.w, workspace_width, tray_width);
-            //fclose(fp);
             int space = max_statusline_width - forced_width;
             if (forced_width > max_statusline_width) {
                 space = 0;
