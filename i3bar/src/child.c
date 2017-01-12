@@ -256,6 +256,15 @@ static int stdin_integer(void *context, long long val) {
     return 1;
 }
 
+static int stdin_double(void * context, double val){
+    parser_ctx *ctx = context;
+    if(strcasecmp(ctx->last_map_key, "fill") == 0) {
+        ctx->block.fill = val * (1<<16) / 100;
+        return 1;
+    }
+    return 1;
+}
+
 /*
  * When a map is finished, we have an entire status block.
  * Move it from the parser's context to the statusline buffer.
@@ -515,6 +524,7 @@ void start_child(char *command) {
     static yajl_callbacks callbacks = {
         .yajl_boolean = stdin_boolean,
         .yajl_integer = stdin_integer,
+        .yajl_double = stdin_double,
         .yajl_string = stdin_string,
         .yajl_start_map = stdin_start_map,
         .yajl_map_key = stdin_map_key,
