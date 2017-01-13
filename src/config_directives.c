@@ -185,8 +185,10 @@ CFGFUN(workspace_layout, const char *layout) {
     else if (strcmp(layout, "stacking") == 0 ||
              strcmp(layout, "stacked") == 0)
         config.default_layout = L_STACKED;
-    else
+    else if (strcmp(layout, "tabbed"))
         config.default_layout = L_TABBED;
+    else
+        config.default_layout = L_VTABBED;
 }
 
 CFGFUN(new_window, const char *windowtype, const char *border, const long width) {

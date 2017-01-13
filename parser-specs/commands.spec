@@ -98,10 +98,10 @@ state BORDER_WIDTH:
   border_width = number
     -> call cmd_border($border_style, &border_width)
 
-# layout default|stacked|stacking|tabbed|splitv|splith
+# layout default|stacked|stacking|tabbed|vtabbed|splitv|splith
 # layout toggle [split|all]
 state LAYOUT:
-  layout_mode = 'default', 'stacked', 'stacking', 'tabbed', 'splitv', 'splith'
+  layout_mode = 'default', 'stacked', 'stacking', 'tabbed', 'vtabbed', 'splitv', 'splith'
       -> call cmd_layout($layout_mode)
   'toggle'
       -> LAYOUT_TOGGLE

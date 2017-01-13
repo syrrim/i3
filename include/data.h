@@ -95,7 +95,8 @@ typedef enum {
     L_DOCKAREA = 3,
     L_OUTPUT = 4,
     L_SPLITV = 5,
-    L_SPLITH = 6
+    L_SPLITH = 6,
+    L_VTABBED = 7
 } layout_t;
 
 /**

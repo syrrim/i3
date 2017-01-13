@@ -1499,6 +1499,8 @@ void cmd_layout(I3_CMD, const char *layout_str) {
         layout = L_STACKED;
     else if (strcmp(layout_str, "tabbed") == 0)
         layout = L_TABBED;
+    else if (strcmp(layout_str, "vtabbed") == 0)
+        layout = L_VTABBED;
     else if (strcmp(layout_str, "splitv") == 0)
         layout = L_SPLITV;
     else if (strcmp(layout_str, "splith") == 0)

@@ -142,6 +142,7 @@ static bool tiling_resize(Con *con, xcb_button_press_event_t *event, const click
 
         if ((check_con->layout == L_STACKED ||
              check_con->layout == L_TABBED ||
+             check_con->layout == L_VTABBED ||
              con_orientation(check_con) == HORIZ) &&
             con_num_children(check_con) > 1) {
             DLOG("Not handling this resize, this container has > 1 child.\n");
@@ -223,7 +224,7 @@ static int route_click(Con *con, xcb_button_press_event_t *event, const bool mod
     /* get the floating con */
     Con *floatingcon = con_inside_floating(con);
     const bool proportional = (event->state & XCB_KEY_BUT_MASK_SHIFT) == XCB_KEY_BUT_MASK_SHIFT;
-    const bool in_stacked = (con->parent->layout == L_STACKED || con->parent->layout == L_TABBED);
+    const bool in_stacked = (con->parent->layout == L_STACKED || con->parent->layout == L_TABBED || con->parent->layout == L_VTABBED);
 
     /* 1: see if the user scrolled on the decoration of a stacked/tabbed con */
     if (in_stacked &&

@@ -317,6 +317,9 @@ void dump_node(yajl_gen gen, struct Con *con, bool inplace_restart) {
         case L_TABBED:
             ystr("tabbed");
             break;
+        case L_VTABBED:
+            ystr("vtabbed");
+            break;
         case L_DOCKAREA:
             ystr("dockarea");
             break;
@@ -335,6 +338,9 @@ void dump_node(yajl_gen gen, struct Con *con, bool inplace_restart) {
             break;
         case L_TABBED:
             ystr("tabbed");
+            break;
+        case L_VTABBED:
+            ystr("vtabbed");
             break;
         default:
             DLOG("About to dump workspace_layout=%d (none of default/stacked/tabbed), this is a bug.\n", con->workspace_layout);

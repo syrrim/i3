@@ -98,9 +98,9 @@ state DEFAULT_ORIENTATION:
   orientation = 'horizontal', 'vertical', 'auto'
       -> call cfg_default_orientation($orientation)
 
-# workspace_layout <default|stacking|tabbed>
+# workspace_layout <default|stacking|tabbed|vtabbed>
 state WORKSPACE_LAYOUT:
-  layout = 'default', 'stacking', 'stacked', 'tabbed'
+  layout = 'default', 'stacking', 'stacked', 'tabbed', 'vtabbed'
       -> call cfg_workspace_layout($layout)
 
 # new_window <normal|1pixel|none>

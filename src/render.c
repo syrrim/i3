@@ -17,6 +17,7 @@ static void render_output(Con *con);
 static void render_con_split(Con *con, Con *child, render_params *p, int i);
 static void render_con_stacked(Con *con, Con *child, render_params *p, int i);
 static void render_con_tabbed(Con *con, Con *child, render_params *p, int i);
+static void render_con_vtabbed(Con *con, Con *child, render_params *p, int i);
 static void render_con_dockarea(Con *con, Con *child, render_params *p);
 
 /*
@@ -146,6 +147,8 @@ void render_con(Con *con, bool render_fullscreen) {
                 render_con_stacked(con, child, &params, i);
             } else if (con->layout == L_TABBED) {
                 render_con_tabbed(con, child, &params, i);
+            } else if (con->layout == L_VTABBED) {
+                render_con_vtabbed(con, child, &params, i);
             } else if (con->layout == L_DOCKAREA) {
                 render_con_dockarea(con, child, &params);
             }
@@ -158,7 +161,18 @@ void render_con(Con *con, bool render_fullscreen) {
         }
 
         /* in a stacking or tabbed container, we ensure the focused client is raised */
-        if (con->layout == L_STACKED || con->layout == L_TABBED) {
+        if (con->layout == L_STACKED || con->layout == L_TABBED || con->layout == L_VTABBED) {
+            if (params.children != 1)
+                /* Raise the stack con itself. This will put the stack decoration on
+             * top of every stack window. That way, when a new window is opened in
+             * the stack, the old window will not obscure part of the decoration
+             * (it’s unmapped afterwards). */
+
+                /* If the stack con renders first it paints ugly black bars
+                 * across the window */
+
+                x_raise_con(con);
+
             TAILQ_FOREACH_REVERSE(child, &(con->focus_head), focus_head, focused)
             x_raise_con(child);
             if ((child = TAILQ_FIRST(&(con->focus_head)))) {
@@ -169,12 +183,6 @@ void render_con(Con *con, bool render_fullscreen) {
                 render_con(child, false);
             }
 
-            if (params.children != 1)
-                /* Raise the stack con itself. This will put the stack decoration on
-             * top of every stack window. That way, when a new window is opened in
-             * the stack, the old window will not obscure part of the decoration
-             * (it’s unmapped afterwards). */
-                x_raise_con(con);
         }
     }
 
@@ -430,6 +438,25 @@ static void render_con_stacked(Con *con, Con *child, render_params *p, int i) {
     if (p->children > 1 || (child->border_style != BS_PIXEL && child->border_style != BS_NONE)) {
         child->rect.y += (p->deco_height * p->children);
         child->rect.height -= (p->deco_height * p->children);
+    }
+}
+
+static void render_con_vtabbed(Con *con, Con *child, render_params *p, int i) {
+    assert(con->layout == L_VTABBED);
+
+    child->rect.x = p->x;
+    child->rect.y = p->y;
+    child->rect.width = p->rect.width;
+    child->rect.height = p->rect.height;
+
+    child->deco_rect.width = 201; // magic
+    child->deco_rect.x = p->x - con->rect.x;
+    child->deco_rect.y = p->y - con->rect.y + i * p->deco_height;
+
+    if (p->children > 1 || (child->border_style != BS_PIXEL && child->border_style != BS_NONE)) {
+        child->rect.x += child->deco_rect.width;
+        child->rect.width -= child->deco_rect.width;
+        child->deco_rect.height = p->deco_height;
     }
 }
 

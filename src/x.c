@@ -324,7 +324,7 @@ static void x_draw_title_border(Con *con, struct deco_render_params *p) {
     adjacent_t borders_to_hide = con_adjacent_borders(con) & config.hide_edge_borders;
     int deco_diff_l = borders_to_hide & ADJ_LEFT_SCREEN_EDGE ? 0 : con->current_border_width;
     int deco_diff_r = borders_to_hide & ADJ_RIGHT_SCREEN_EDGE ? 0 : con->current_border_width;
-    if (con->parent->layout == L_TABBED ||
+    if (con->parent->layout == L_TABBED || con->parent->layout == L_VTABBED ||
         (con->parent->layout == L_STACKED && TAILQ_NEXT(con, nodes) != NULL)) {
         deco_diff_l = 0;
         deco_diff_r = 0;
@@ -390,7 +390,8 @@ void x_draw_decoration(Con *con) {
      */
     if ((!leaf &&
          parent->layout != L_STACKED &&
-         parent->layout != L_TABBED) ||
+         parent->layout != L_TABBED &&
+         parent->layout != L_VTABBED) ||
         parent->type == CT_OUTPUT ||
         parent->type == CT_DOCKAREA ||
         con->type == CT_FLOATING_CON)
@@ -746,6 +747,7 @@ void x_push_node(Con *con) {
     bool is_pixmap_needed = (con->border_style != BS_NONE ||
                              !con_is_leaf(con) ||
                              con->parent->layout == L_STACKED ||
+                             con->parent->layout == L_VTABBED ||
                              con->parent->layout == L_TABBED);
 
     /* The root con and output cons will never require a pixmap. In particular for the

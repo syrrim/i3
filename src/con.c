@@ -303,7 +303,7 @@ bool con_is_hidden(Con *con) {
      * which is stacked or tabbed. */
     while (current != NULL && current->type != CT_WORKSPACE) {
         Con *parent = current->parent;
-        if (parent != NULL && (parent->layout == L_TABBED || parent->layout == L_STACKED)) {
+        if (parent != NULL && (parent->layout == L_TABBED || parent->layout == L_VTABBED || parent->layout == L_STACKED)) {
             if (TAILQ_FIRST(&(parent->focus_head)) != current)
                 return true;
         }
@@ -1230,11 +1230,12 @@ orientation_t con_orientation(Con *con) {
     switch (con->layout) {
         case L_SPLITV:
         /* stacking containers behave like they are in vertical orientation */
+        case L_VTABBED: //vtabbed behave like in vertical
         case L_STACKED:
             return VERT;
 
         case L_SPLITH:
-        /* tabbed containers behave like they are in vertical orientation */
+        /* tabbed containers behave like they are in ~~vertical~~ horizontal orientation */ 
         case L_TABBED:
             return HORIZ;
 
@@ -1563,7 +1564,7 @@ int con_border_style(Con *con) {
     if (con->parent->layout == L_STACKED)
         return (con_num_children(con->parent) == 1 ? con->border_style : BS_NORMAL);
 
-    if (con->parent->layout == L_TABBED && con->border_style != BS_NORMAL)
+    if ((con->parent->layout == L_VTABBED || con->parent->layout == L_TABBED) && con->border_style != BS_NORMAL)
         return (con_num_children(con->parent) == 1 ? con->border_style : BS_NORMAL);
 
     if (con->parent->type == CT_DOCKAREA)
@@ -1640,7 +1641,7 @@ void con_set_layout(Con *con, layout_t layout) {
      * intuitive operations (like level-up and then opening a new window), we
      * need to create a new split container. */
     if (con->type == CT_WORKSPACE &&
-        (layout == L_STACKED || layout == L_TABBED)) {
+        (layout == L_STACKED || layout == L_TABBED || layout == L_VTABBED)) {
         if (con_num_children(con) == 0) {
             DLOG("Setting workspace_layout to %d\n", layout);
             con->workspace_layout = layout;
@@ -1824,7 +1825,7 @@ Rect con_minimum_size(Con *con) {
         return con_minimum_size(child);
     }
 
-    if (con->layout == L_STACKED || con->layout == L_TABBED) {
+    if (con->layout == L_STACKED || con->layout == L_TABBED || con->layout == L_VTABBED) {
         uint32_t max_width = 0, max_height = 0, deco_height = 0;
         Con *child;
         TAILQ_FOREACH(child, &(con->nodes_head), nodes) {
@@ -2052,6 +2053,8 @@ char *con_get_tree_representation(Con *con) {
         buf = sstrdup("H[");
     else if (con->layout == L_TABBED)
         buf = sstrdup("T[");
+    else if (con->layout == L_VTABBED)
+        buf = sstrdup("U[");
     else if (con->layout == L_STACKED)
         buf = sstrdup("S[");
     else {
