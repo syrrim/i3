@@ -114,12 +114,6 @@ To enable, first add a similar line to this in your config:
 
 And you will be able to enable vtabbed the same as any other layout. 
 
-###Bugs
-
-For some reason, when you switch workspaces, and then try to switch back to a
-workspace in vtabbed, this will cause i3 to crash. My solution as of now is to
-avoid switching workspaces. 
-
 
 ##Upstream
 

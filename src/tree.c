@@ -176,6 +176,104 @@ static bool _is_con_mapped(Con *con) {
 }
 
 /*
+ * Recursive function to find next focussed window
+ *
+ */
+static Con * find_next(Con *con, char way, bool wrap) {
+    /* When dealing with fullscreen containers, it's necessary to go up to the
+     * workspace level, because 'focus $dir' will start at the con's real
+     * position in the tree, and it may not be possible to get to the edge
+     * normally due to fullscreen focusing restrictions. */
+    if (con->fullscreen_mode == CF_OUTPUT && con->type != CT_WORKSPACE)
+        con = con_get_workspace(con);
+
+    /* Give up at workspace. */
+    if (con->type == CT_WORKSPACE) {
+        return NULL;
+    }
+
+    Con *parent = con->parent;
+
+    if (con->type == CT_FLOATING_CON) {
+        /* left/right focuses the previous/next floating container */
+        Con *next;
+        if (way == 'n')
+            next = TAILQ_NEXT(con, floating_windows);
+        else
+            next = TAILQ_PREV(con, floating_head, floating_windows);
+
+        /* If there is no next/previous container, wrap */
+        if (!next) {
+            if (way == 'n')
+                next = TAILQ_FIRST(&(parent->floating_head));
+            else
+                next = TAILQ_LAST(&(parent->floating_head), floating_head);
+        }
+
+        /* Still no next/previous container? bail out */
+        if (!next)
+            return NULL;
+
+        /* Raise the floating window on top of other windows preserving
+         * relative stack order */
+        /*while (TAILQ_LAST(&(parent->floating_head), floating_head) != next) {
+            Con *last = TAILQ_LAST(&(parent->floating_head), floating_head);
+            TAILQ_REMOVE(&(parent->floating_head), last, floating_windows);
+            TAILQ_INSERT_HEAD(&(parent->floating_head), last, floating_windows);
+        }*/
+        return next;
+    }
+
+    /* If the orientation does not match or there is no other con to focus, we
+     * need to go higher in the hierarchy */
+    if (//con_orientation(parent) != orientation ||
+        con_num_children(parent) == 1)
+        return find_next(parent, way, wrap);
+
+    Con *current = TAILQ_FIRST(&(parent->focus_head));
+    /* TODO: when can the following happen (except for floating windows, which
+     * are handled above)? */
+    if (TAILQ_EMPTY(&(parent->nodes_head))) {
+        DLOG("nothing to focus\n");
+        return false;
+    }
+
+    Con *next;
+    if (way == 'n')
+        next = TAILQ_NEXT(current, nodes);
+    else
+        next = TAILQ_PREV(current, nodes_head, nodes);
+
+    if (!next) {
+        if (!config.force_focus_wrapping) {
+            /* If there is no next/previous container, we check if we can focus one
+             * when going higher (without wrapping, though). If so, we are done, if
+             * not, we wrap */
+            next = find_next(parent, way, false);
+            if(next)
+                return next;
+
+            if (!wrap)
+                return NULL;
+        }
+
+        if (way == 'n')
+            next = TAILQ_FIRST(&(parent->nodes_head));
+        else
+            next = TAILQ_LAST(&(parent->nodes_head), nodes_head);
+    }
+
+    /* Don't violate fullscreen focus restrictions. */
+    if (!con_fullscreen_permits_focusing(next))
+        return NULL;
+
+    /* 3: focus choice comes in here. at the moment we will go down
+     * until we find a window */
+    /* TODO: check for window, atm we only go down as far as possible */
+    return next;
+}
+
+/*
  * Closes the given container including all children.
  * Returns true if the container was killed or false if just WM_DELETE was sent
  * and the window is expected to kill itself.
@@ -207,7 +305,7 @@ bool tree_close_internal(Con *con, kill_window_t kill_window, bool dont_kill_par
     }
 
     /* Get the container which is next focused */
-    Con *next = con_get_next(con, 'p', VERT);
+    Con *next = find_next(con, 'p', true);
     if(!next)next = con_next_focused(con);
     DLOG("next = %p, focused = %p\n", next, focused);
 
