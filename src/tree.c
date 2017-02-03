@@ -207,7 +207,8 @@ bool tree_close_internal(Con *con, kill_window_t kill_window, bool dont_kill_par
     }
 
     /* Get the container which is next focused */
-    Con *next = con_next_focused(con);
+    Con *next = con_get_next(con, 'p', VERT);
+    if(!next)next = con_next_focused(con);
     DLOG("next = %p, focused = %p\n", next, focused);
 
     DLOG("closing %p, kill_window = %d\n", con, kill_window);
