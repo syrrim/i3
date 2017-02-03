@@ -1,9 +1,11 @@
 #i3
 
-This fork of i3 reforms certain functions of i3bar. In doing so, it removes
-some features, and adds several. These are listed below.
+This is my personal fork of i3, which adds some unrelated features to make i3
+more enjoyable to use. 
 
-##Features
+##i3bar
+
+This fork performs heavy reforms on the use and display of i3bar. 
 
 ###Borders
 
@@ -64,7 +66,7 @@ both fill and fill_color are set, then fill_color will be used like a second
 background, filling a percentage of the width pertaining to the percentage
 specified. 
 
-##Use
+###Use
 
 No doubt many i3bar children easily support adding the necessary options to take
 advantage many of these features. i3blocks allows the addition of options by
@@ -78,15 +80,15 @@ whitespace on the full_text. However, this requires configuration of your child
 process to do anyways, so I thought you might as well modify your child to set
 the width explicitly. 
 
-
 i3status makes it quite difficult to add new properties, requiring them to be
 individually configured for each block type. Moreover, in it's default state, it
 doesn't support the current full wealth of i3bars options (eg background).
 Furthermore, i3status is complex enough that adding the width modifications
-described above would be quite a chore.
+described above would be quite a chore. I would advise not mixing i3status and
+this version of i3bar.
 
 
-##Example
+###Example
 
 i3bar is fully dependant on it's child process. Following is an image of an
 example configuration. This configuration  would be described in detail at
@@ -94,11 +96,34 @@ syrrim/i3blocks.
 
 ![example](screenie.png)
 
+##Vertical Tabs
+
+Vertical tabs are presented in a separate column to the left of the window. At
+first glance thye may seem lesser to horizontal tabs and to stacking mode: they
+are much thinner (can't display long titles), and by default they waste the
+majority of the column. The advantage is that they maintain their dimensions
+even when you've created a large number of them. If you open 10  tabs in
+stacking mode this will take up a quarter of your screen. If you open 10 tabs
+horizontally, they will each be much thinner than the tabs in vtabbed.
+
+###Use
+
+To enable, first add a similar line to this in your config:
+
+    bindsym $mod+t layout vtabbed
+
+And you will be able to enable vtabbed the same as any other layout. 
+
+###Bugs
+
+For some reason, when you switch workspaces, and then try to switch back to a
+workspace in vtabbed, this will cause i3 to crash. My solution as of now is to
+avoid switching workspaces. 
+
 
 ##Upstream
 
-This is a fork of i3/i3. The majority of the source code, including anything
-outside i3bar, comes from there. Patches pertaining to the features described
-above, or which analysis of the commit history has otherwise lain at my feet,
-might be submitted here. Otherwise, they should probably be brought to the
-attention of mainline i3. 
+This is a fork of i3/i3. The majority of the source code comes from there.
+Patches pertaining to the features described above, or which analysis of the
+commit history has otherwise lain at my feet, might be submitted here.
+Otherwise, they should probably be brought to the attention of mainline i3. 
