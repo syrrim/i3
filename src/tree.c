@@ -195,33 +195,7 @@ static Con * find_next(Con *con, char way, bool wrap) {
     Con *parent = con->parent;
 
     if (con->type == CT_FLOATING_CON) {
-        /* left/right focuses the previous/next floating container */
-        Con *next;
-        if (way == 'n')
-            next = TAILQ_NEXT(con, floating_windows);
-        else
-            next = TAILQ_PREV(con, floating_head, floating_windows);
-
-        /* If there is no next/previous container, wrap */
-        if (!next) {
-            if (way == 'n')
-                next = TAILQ_FIRST(&(parent->floating_head));
-            else
-                next = TAILQ_LAST(&(parent->floating_head), floating_head);
-        }
-
-        /* Still no next/previous container? bail out */
-        if (!next)
-            return NULL;
-
-        /* Raise the floating window on top of other windows preserving
-         * relative stack order */
-        /*while (TAILQ_LAST(&(parent->floating_head), floating_head) != next) {
-            Con *last = TAILQ_LAST(&(parent->floating_head), floating_head);
-            TAILQ_REMOVE(&(parent->floating_head), last, floating_windows);
-            TAILQ_INSERT_HEAD(&(parent->floating_head), last, floating_windows);
-        }*/
-        return next;
+        return NULL; // I feel like I can't do anything right
     }
 
     /* If the orientation does not match or there is no other con to focus, we
@@ -305,11 +279,14 @@ bool tree_close_internal(Con *con, kill_window_t kill_window, bool dont_kill_par
     }
 
     /* Get the container which is next focused */
+    DLOG("closing %p, kill_window = %d\n", con, kill_window);
     Con *next = find_next(con, 'p', true);
-    if(!next)next = con_next_focused(con);
+    if(!next || next == focused){
+        DLOG("next is %p, falling back to focus", next);
+        next = con_next_focused(con);
+    }
     DLOG("next = %p, focused = %p\n", next, focused);
 
-    DLOG("closing %p, kill_window = %d\n", con, kill_window);
     Con *child, *nextchild;
     bool abort_kill = false;
     /* We cannot use TAILQ_FOREACH because the children get deleted
@@ -445,7 +422,7 @@ bool tree_close_internal(Con *con, kill_window_t kill_window, bool dont_kill_par
 
     if (was_mapped || con == focused) {
         if ((kill_window != DONT_KILL_WINDOW) || !dont_kill_parent || con == focused) {
-            DLOG("focusing %p / %s\n", next, next->name);
+            DLOG("focusing %p /(type: %d)/ %s\n", next, next->type, next->name);
             if (next->type == CT_DOCKAREA) {
                 /* Instead of focusing the dockarea, we need to restore focus to the workspace */
                 con_focus(con_descend_focused(output_get_content(next->parent)));
