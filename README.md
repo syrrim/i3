@@ -114,6 +114,11 @@ To enable, first add a similar line to this in your config:
 
 And you will be able to enable vtabbed the same as any other layout. 
 
+###Close Order
+
+I find it most useful to have an adjacent tab be selected when the focused tab
+closes. This makes the next selection more predictable, and makes it easier to
+close several tabs in a row. 
 
 ##Upstream
 
