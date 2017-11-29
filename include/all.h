@@ -35,6 +35,7 @@
 #include <xcb/xcb_aux.h>
 #include <xcb/xcb_keysyms.h>
 #include <xcb/xcb_icccm.h>
+#include <xcb/res.h>
 
 #include <yajl/yajl_gen.h>
 #include <yajl/yajl_version.h>

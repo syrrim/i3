@@ -12,6 +12,15 @@
 #include "all.h"
 
 #include "yajl_utils.h"
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <unistd.h>
+
+
 
 static void con_on_remove_child(Con *con);
 
@@ -48,6 +57,7 @@ Con *con_new_skeleton(Con *parent, i3Window *window) {
     } else {
         new->depth = root_depth;
     }
+    new->indent = 0;
     DLOG("opening window\n");
 
     TAILQ_INIT(&(new->floating_head));
@@ -718,6 +728,55 @@ Con *con_for_window(Con *con, i3Window *window, Match **store_match) {
     }
 
     return NULL;
+}
+
+Con * con_for_pid(Con *con, uint32_t pid){
+    Con *child;
+
+    TAILQ_FOREACH(child, &(con->nodes_head), nodes) {
+        if(child->window)
+            if(child->window->pid == pid)
+                return child;
+        Con *result = con_for_pid(child, pid);
+        if (result != NULL)
+            return result;
+    }
+
+    TAILQ_FOREACH(child, &(con->floating_head), floating_windows) {
+        if(child->window)
+            if(child->window->pid == pid)
+                return child;
+        Con *result = con_for_pid(child, pid);
+        if (result != NULL)
+            return result;
+    }
+    return NULL;
+}
+
+Con * con_for_ppid(Con * con, uint32_t pid){
+    DLOG("doing pids\n");
+    for(int i = 1; pid && i < 100; i++){
+        Con * res = con_for_pid(con, pid);
+        if(res)
+            return res;
+
+		char path [64];
+		snprintf(path, 64, "/proc/%d/stat", pid);
+		int fd = open(path, O_RDONLY);
+		char word [64];
+		for(int w = 0; w < 4; w++){
+			char ch;
+			while(!read(fd, &ch, 1));
+			int c = 0;
+			while(ch != ' ' && c < 63){
+				word[c++] = ch;
+				read(fd, &ch, 1);
+			}
+			word[c] = '\0';
+		}
+        pid = atoi(word);
+        DLOG(" pid: %d\n", pid);
+    }
 }
 
 /*

@@ -444,24 +444,28 @@ static void render_con_stacked(Con *con, Con *child, render_params *p, int i) {
 static void render_con_vtabbed(Con *con, Con *child, render_params *p, int i) {
     assert(con->layout == L_VTABBED);
 
+    int indent = child->indent * 10;
+
     child->rect.x = p->x;
     child->rect.y = p->y;
     child->rect.width = p->rect.width;
     child->rect.height = p->rect.height;
 
-    child->deco_rect.width = 201; // magic
-    child->deco_rect.x = p->x - con->rect.x;
+    child->deco_rect.width = 201 - indent; // magic
+    child->deco_rect.x = p->x - con->rect.x + indent;
     child->deco_rect.y = p->y - con->rect.y + i * p->deco_height;
 
     if (p->children > 1 || (child->border_style != BS_PIXEL && child->border_style != BS_NONE)) {
-        child->rect.x += child->deco_rect.width;
-        child->rect.width -= child->deco_rect.width;
+        child->rect.x += child->deco_rect.width + indent;
+        child->rect.width -= child->deco_rect.width + indent;
         child->deco_rect.height = p->deco_height;
     }
 }
 
 static void render_con_tabbed(Con *con, Con *child, render_params *p, int i) {
     assert(con->layout == L_TABBED);
+
+    int indent = child->indent * 3;
 
     child->rect.x = p->x;
     child->rect.y = p->y;
@@ -470,7 +474,7 @@ static void render_con_tabbed(Con *con, Con *child, render_params *p, int i) {
 
     child->deco_rect.width = floor((float)child->rect.width / p->children);
     child->deco_rect.x = p->x - con->rect.x + i * child->deco_rect.width;
-    child->deco_rect.y = p->y - con->rect.y;
+    child->deco_rect.y = p->y - con->rect.y + indent;
 
     /* Since the tab width may be something like 31,6 px per tab, we
      * let the last tab have all the extra space (0,6 * children). */
@@ -481,7 +485,7 @@ static void render_con_tabbed(Con *con, Con *child, render_params *p, int i) {
     if (p->children > 1 || (child->border_style != BS_PIXEL && child->border_style != BS_NONE)) {
         child->rect.y += p->deco_height;
         child->rect.height -= p->deco_height;
-        child->deco_rect.height = p->deco_height;
+        child->deco_rect.height = p->deco_height - indent;
     } else {
         child->deco_rect.height = (child->border_style == BS_PIXEL ? 1 : 0);
     }
