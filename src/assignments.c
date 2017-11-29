@@ -59,7 +59,6 @@ void run_assignments(i3Window *window) {
             command_result_free(result);
         }
     }
-
     /* If any of the commands required re-rendering, we will do that now. */
     if (needs_tree_render)
         tree_render();

@@ -319,3 +319,7 @@ void cmd_shmlog(I3_CMD, const char *argument);
  *
  */
 void cmd_debuglog(I3_CMD, const char *argument);
+
+void cmd_force(I3_CMD, const char * ws);
+Con *cmd_force_workspace();
+

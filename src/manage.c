@@ -163,6 +163,11 @@ void manage_window(xcb_window_t window, xcb_get_window_attributes_cookie_t cooki
     wm_user_time_cookie = GET_PROPERTY(A__NET_WM_USER_TIME, UINT32_MAX);
     wm_desktop_cookie = GET_PROPERTY(A__NET_WM_DESKTOP, UINT32_MAX);
 
+    
+    xcb_res_client_id_spec_t spec = {.client=window, .mask=XCB_RES_CLIENT_ID_MASK_LOCAL_CLIENT_PID};
+    xcb_res_query_client_ids_cookie_t client_ids_cookie = xcb_res_query_client_ids(conn, 1, &spec);
+
+
     DLOG("Managing window 0x%08x\n", window);
 
     i3Window *cwindow = scalloc(1, sizeof(i3Window));
@@ -190,6 +195,17 @@ void manage_window(xcb_window_t window, xcb_get_window_attributes_cookie_t cooki
         memset(&wm_size_hints, '\0', sizeof(xcb_size_hints_t));
     xcb_get_property_reply_t *type_reply = xcb_get_property_reply(conn, wm_type_cookie, NULL);
     xcb_get_property_reply_t *state_reply = xcb_get_property_reply(conn, state_cookie, NULL);
+
+    xcb_generic_error_t *client_ids_err = NULL;
+    xcb_res_query_client_ids_reply_t *client_ids_reply = xcb_res_query_client_ids_reply(conn, client_ids_cookie, &client_ids_err);
+    xcb_res_client_id_value_iterator_t client_ids_it = xcb_res_query_client_ids_ids_iterator(client_ids_reply);
+    for (; client_ids_it.rem; xcb_res_client_id_value_next(&client_ids_it)) {
+        if (client_ids_it.data->spec.mask & XCB_RES_CLIENT_ID_MASK_LOCAL_CLIENT_PID) {
+            cwindow->pid = *xcb_res_client_id_value_value(client_ids_it.data);
+            break;
+        }
+    }
+    free(client_ids_reply);
 
     xcb_get_property_reply_t *startup_id_reply;
     startup_id_reply = xcb_get_property_reply(conn, startup_id_cookie, NULL);
@@ -249,6 +265,7 @@ void manage_window(xcb_window_t window, xcb_get_window_attributes_cookie_t cooki
     Con *nc = NULL;
     Match *match = NULL;
     Assignment *assignment;
+    Con * parent;
 
     /* TODO: two matches for one container */
 
@@ -256,9 +273,12 @@ void manage_window(xcb_window_t window, xcb_get_window_attributes_cookie_t cooki
     nc = con_for_window(search_at, cwindow, &match);
     const bool match_from_restart_mode = (match && match->restart_mode);
     if (nc == NULL) {
+        DLOG("nc is null\n");
         Con *wm_desktop_ws = NULL;
+        LOG("window pid: %d\n", cwindow->pid);
 
         /* If not, check if it is assigned to a specific workspace */
+        LOG("running assignments\n");
         if ((assignment = assignment_for(cwindow, A_TO_WORKSPACE))) {
             DLOG("Assignment matches (%p)\n", match);
             Con *assigned_ws = workspace_get(assignment->dest.workspace, NULL);
@@ -272,6 +292,26 @@ void manage_window(xcb_window_t window, xcb_get_window_attributes_cookie_t cooki
             /* set the urgency hint on the window if the workspace is not visible */
             if (!workspace_is_visible(assigned_ws))
                 urgency_hint = true;
+        } else if ((parent = con_for_ppid(croot, cwindow->pid))){
+            DLOG("parent %d, %s\n", parent->type, parent->window->class_class);
+            DLOG("parent parent %d, %s\n", parent->parent->type, parent->parent->name);
+            nc = tree_open_con(parent->parent, cwindow);
+            struct nodes_head *nodes_head = &(parent->parent->nodes_head);
+            TAILQ_REMOVE(nodes_head, nc, nodes);
+            TAILQ_INSERT_AFTER(nodes_head, parent, nc, nodes);
+            nc->indent = parent->indent + 1;
+        } else if (cmd_force_workspace()) {
+            nc = con_descend_tiling_focused(cmd_force_workspace());
+            LOG("focused on ws %s: %p / %s\n", cmd_force_workspace()->name, nc, nc->name);
+            if (nc->type == CT_WORKSPACE)
+                nc = tree_open_con(nc, cwindow);
+            else
+                nc = tree_open_con(nc->parent, cwindow);
+
+            /* set the urgency hint on the window if the workspace is not visible */
+            if (!workspace_is_visible(cmd_force_workspace()))
+                urgency_hint = true;
+
         } else if (cwindow->wm_desktop != NET_WM_DESKTOP_NONE &&
                    cwindow->wm_desktop != NET_WM_DESKTOP_ALL &&
                    (wm_desktop_ws = ewmh_get_workspace_by_index(cwindow->wm_desktop)) != NULL) {
@@ -306,6 +346,7 @@ void manage_window(xcb_window_t window, xcb_get_window_attributes_cookie_t cooki
                 nc = tree_open_con(NULL, cwindow);
         }
     } else {
+        DLOG("nc's not null\n");
         /* M_BELOW inserts the new window as a child of the one which was
          * matched (e.g. dock areas) */
         if (match != NULL && match->insert_where == M_BELOW) {

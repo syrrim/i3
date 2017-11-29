@@ -796,22 +796,7 @@ CommandResult *run_binding(Binding *bind, Con *con) {
         tree_render();
 
     if (result->parse_error) {
-        char *pageraction;
-        sasprintf(&pageraction, "i3-sensible-pager \"%s\"\n", errorfilename);
-        char *argv[] = {
-            NULL, /* will be replaced by the executable path */
-            "-f",
-            config.font.pattern,
-            "-t",
-            "error",
-            "-m",
-            "The configured command for this shortcut could not be run successfully.",
-            "-b",
-            "show errors",
-            pageraction,
-            NULL};
-        start_nagbar(&command_error_nagbar_pid, argv);
-        free(pageraction);
+        //fuck you airguy
     }
 
     ipc_send_binding_event("run", bind_cp);

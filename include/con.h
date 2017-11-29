@@ -196,6 +196,9 @@ void con_unmark(Con *con, const char *name);
  */
 Con *con_for_window(Con *con, i3Window *window, Match **store_match);
 
+
+Con * con_for_ppid(Con * con, uint32_t pid);
+
 /**
  * Returns the number of children of this container.
  *

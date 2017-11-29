@@ -457,6 +457,9 @@ struct Window {
 
     /* aspect ratio from WM_NORMAL_HINTS (MPlayer uses this for example) */
     double aspect_ratio;
+
+    /* The pid of process associated with window */
+    uint32_t pid;
 };
 
 /**
@@ -736,4 +739,6 @@ struct Con {
 
     /* The colormap for this con if a custom one is used. */
     xcb_colormap_t colormap;
+
+    uint32_t indent;
 };

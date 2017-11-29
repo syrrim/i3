@@ -2120,3 +2120,33 @@ void cmd_debuglog(I3_CMD, const char *argument) {
     // XXX: default reply for now, make this a better reply
     ysuccess(true);
 }
+
+static char * force_ws;
+
+/*
+ * Implementatiion of 'force [<ws>]'
+ */
+void cmd_force(I3_CMD, const char *ws) {
+    if(ws){
+        if(force_ws){
+            free(force_ws);
+        }
+        force_ws = malloc(strlen(ws)+1);
+        strcpy(force_ws, ws);
+    } else {
+        free(force_ws);
+        force_ws = NULL;
+    }
+    ysuccess(true);
+}
+
+Con * cmd_force_workspace(){
+    if(force_ws) {
+        bool created;
+        Con * workspace = workspace_get(force_ws, &created);
+        if(created){LOG("created workspace %s", force_ws);}
+        return workspace;
+    } else {
+        return NULL;
+    }
+}

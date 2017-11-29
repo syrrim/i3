@@ -41,6 +41,7 @@ state INITIAL:
   'title_format' -> TITLE_FORMAT
   'mode' -> MODE
   'bar' -> BAR
+  'force' -> FORCE
 
 state CRITERIA:
   ctype = 'class'       -> CRITERION
@@ -430,3 +431,9 @@ state BAR_W_ID:
       ->
   end
       -> call cmd_bar($bar_type, $bar_value, $bar_id)
+
+state FORCE:
+  ws = string
+      -> call cmd_force($ws)
+  end
+      -> call cmd_force(NULL)
