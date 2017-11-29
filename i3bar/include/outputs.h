@@ -53,6 +53,7 @@ struct i3_output {
     int ws;       /* The number of the currently visible ws */
     rect rect;    /* The rect (relative to the root window) */
 
+
     /* Off-screen buffer for preliminary rendering of the bar. */
     surface_t buffer;
     /* Off-screen buffer for pre-rendering the statusline, separated to make clipping easier. */

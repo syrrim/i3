@@ -251,7 +251,11 @@ static int stdin_integer(void *context, long long val) {
     if (strcasecmp(ctx->last_map_key, "fill") == 0) { // expected to be percentage
         ctx->block.fill = val * (1<<16) / 100;
         return 1;
-    }
+    }   
+    if (strcasecmp(ctx->last_map_key, "pos") == 0) {
+        ctx->block.pos = val;
+        return 1;
+    }   
 
     return 1;
 }
@@ -285,16 +289,6 @@ static int stdin_end_map(void *context) {
 
 	if(new_block->fill == 0 && new_block->fill_color){
 	    char * percent = i3string_as_utf8(new_block->full_text);
-	    while(*percent && *percent != '%'){
-	        percent ++;
-	    }
-        if(*percent){
-            do{
-                percent --;
-            }while(48 <= *percent && *percent < 58);
-
-            new_block->fill = atoi(percent+1) * (1<<16) / 100;
-        }
 	}
 
     i3string_set_markup(new_block->full_text, new_block->pango_markup);

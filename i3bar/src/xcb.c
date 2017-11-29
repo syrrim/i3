@@ -160,7 +160,7 @@ int get_tray_width(struct tc_head *trayclients) {
 }
 
 /* 
- * Draws one block of the statusline, x pixels fromthe edge. Will put triangular
+ * Draws one block of the statusline, x pixels from the edge. Will put triangular
  * caps on the front or back if tail or head true. 
  */
 void draw_one_block(i3_output *output, uint32_t x, struct status_block *block, bool head, bool tail, bool use_focus_colors){ 
@@ -191,7 +191,7 @@ void draw_one_block(i3_output *output, uint32_t x, struct status_block *block, b
     color_t arrow_color = bg_color;
     if(block->fill && block->fill_color){
         color_t fill_color = draw_util_hex_to_color(block->fill_color);
-        if(block->fill == (1<<16)){
+        if(block->fill >= (1<<16)){
             arrow_color = fill_color;
         }
         uint32_t start;
@@ -232,7 +232,9 @@ void draw_one_block(i3_output *output, uint32_t x, struct status_block *block, b
         }
     }else{
         width = text_width;
-        switch (block->align) {
+        if(block->pos){
+            x = block->pos;
+        }else switch (block->align) {
             case ALIGN_LEFT:
                 break;
             case ALIGN_RIGHT:
@@ -456,7 +458,7 @@ void handle_button(xcb_button_press_event_t *event) {
                 block_x += block->actual_width;
 
                 if (statusline_x <= block_x && statusline_x >= last_block_x) {
-                    send_block_clicked(event->detail, block->name, block->instance, event->root_x, event->root_y);
+                    send_block_clicked(event->detail, block->name, block->instance, (event->root_x - last_block_x - offset) * 100 / (block_x - last_block_x), event->root_y);
                     return;
                 }
             }

@@ -52,6 +52,9 @@ struct status_block {
     char *background;
     char *border;
 
+    /* If set, the number of pixels away from the left to position the block
+     * */
+    uint32_t pos;
     /* The number of chars the block wants to take up. Set to zero to have it be
      * variable.  */
     uint32_t width;
