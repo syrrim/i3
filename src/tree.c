@@ -282,10 +282,14 @@ bool tree_close_internal(Con *con, kill_window_t kill_window, bool dont_kill_par
     DLOG("closing %p, kill_window = %d\n", con, kill_window);
     Con *prev = find_next(con, 'p', false);
     Con *next = find_next(con, 'n', false);
-    if(next->indent > con->indent){
-        next->indent --; //is the heir to the dying con, must take up his fathers sword
-    }else if(next->indent < con->indent){
-        next = prev; //prefer siblings over cousins several times removed. Note that 'next' noe means inline, rather than visually
+    if(next){
+        if(next->indent > con->indent){
+            next->indent --; //is the heir to the dying con, must take up his fathers sword
+        }else if(next->indent < con->indent){
+            next = prev; //prefer siblings over cousins several times removed. Note that 'next' noe means inline, rather than visually
+        }
+    }else{ 
+        next = prev;
     }
     if(!next || next == focused){
         DLOG("next is %p, falling back to focus", next);
