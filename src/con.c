@@ -67,7 +67,7 @@ Con *con_new_skeleton(Con *parent, i3Window *window) {
     TAILQ_INIT(&(new->marks_head));
 
     if (parent != NULL)
-        con_attach(new, parent, false);
+        con_attach(new, parent, true);
 
     return new;
 }
@@ -302,24 +302,24 @@ bool con_is_split(Con *con) {
 }
 
 /*
- * This will only return true for containers which have some parent with
- * a tabbed / stacked parent of which they are not the currently focused child.
+ * This will always return false, because compositors
  *
  */
 bool con_is_hidden(Con *con) {
-    Con *current = con;
 
-    /* ascend to the workspace level and memorize the highest-up container
-     * which is stacked or tabbed. */
-    while (current != NULL && current->type != CT_WORKSPACE) {
-        Con *parent = current->parent;
-        if (parent != NULL && (parent->layout == L_TABBED || parent->layout == L_VTABBED || parent->layout == L_STACKED)) {
-            if (TAILQ_FIRST(&(parent->focus_head)) != current)
-                return true;
-        }
+    //Con *current = con;
 
-        current = parent;
-    }
+    ///* ascend to the workspace level and memorize the highest-up container
+    // * which is stacked or tabbed. */
+    //while (current != NULL && current->type != CT_WORKSPACE) {
+    //    Con *parent = current->parent;
+    //    if (parent != NULL && (parent->layout == L_TABBED || parent->layout == L_VTABBED || parent->layout == L_STACKED)) {
+    //        if (TAILQ_FIRST(&(parent->focus_head)) != current)
+    //            return true;
+    //    }
+
+    //    current = parent;
+    //}
 
     return false;
 }
@@ -760,23 +760,24 @@ Con * con_for_ppid(Con * con, uint32_t pid){
         if(res)
             return res;
 
-		char path [64];
-		snprintf(path, 64, "/proc/%d/stat", pid);
-		int fd = open(path, O_RDONLY);
-		char word [64];
-		for(int w = 0; w < 4; w++){
-			char ch;
-			while(!read(fd, &ch, 1));
-			int c = 0;
-			while(ch != ' ' && c < 63){
-				word[c++] = ch;
-				read(fd, &ch, 1);
-			}
-			word[c] = '\0';
-		}
+        char path [64];
+        snprintf(path, 64, "/proc/%d/stat", pid);
+        int fd = open(path, O_RDONLY);
+        char word [64];
+        for(int w = 0; w < 4; w++){
+            char ch;
+            while(!read(fd, &ch, 1));
+            int c = 0;
+            while(ch != ' ' && c < 63){
+                word[c++] = ch;
+                read(fd, &ch, 1);
+            }
+            word[c] = '\0';
+        }
         pid = atoi(word);
         DLOG(" pid: %d\n", pid);
     }
+    return NULL;
 }
 
 /*

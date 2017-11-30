@@ -740,5 +740,5 @@ struct Con {
     /* The colormap for this con if a custom one is used. */
     xcb_colormap_t colormap;
 
-    uint32_t indent;
+    uint32_t indent; //TODO: recover after restart
 };
