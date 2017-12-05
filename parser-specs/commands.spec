@@ -102,7 +102,7 @@ state BORDER_WIDTH:
 # layout default|stacked|stacking|tabbed|vtabbed|splitv|splith
 # layout toggle [split|all]
 state LAYOUT:
-  layout_mode = 'default', 'stacked', 'stacking', 'tabbed', 'vtabbed', 'splitv', 'splith'
+  layout_mode = 'default', 'stacked', 'stacking', 'tabbed', 'vtabbed', 'splitv', 'splith', 'preview'
       -> call cmd_layout($layout_mode)
   'toggle'
       -> LAYOUT_TOGGLE

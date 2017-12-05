@@ -187,6 +187,8 @@ CFGFUN(workspace_layout, const char *layout) {
         config.default_layout = L_STACKED;
     else if (strcmp(layout, "tabbed"))
         config.default_layout = L_TABBED;
+    else if (strcmp(layout, "preveiw"))
+        config.default_layout = L_PREVIEW;
     else
         config.default_layout = L_VTABBED;
 }

@@ -143,6 +143,7 @@ static bool tiling_resize(Con *con, xcb_button_press_event_t *event, const click
         if ((check_con->layout == L_STACKED ||
              check_con->layout == L_TABBED ||
              check_con->layout == L_VTABBED ||
+             check_con->layout == L_PREVIEW ||
              con_orientation(check_con) == HORIZ) &&
             con_num_children(check_con) > 1) {
             DLOG("Not handling this resize, this container has > 1 child.\n");

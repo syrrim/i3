@@ -1289,9 +1289,10 @@ void con_move_to_output(Con *con, Output *output) {
 orientation_t con_orientation(Con *con) {
     switch (con->layout) {
         case L_SPLITV:
-        /* stacking containers behave like they are in vertical orientation */
         case L_VTABBED: //vtabbed behave like in vertical
+        /* stacking containers behave like they are in vertical orientation */
         case L_STACKED:
+        case L_PREVIEW:
             return VERT;
 
         case L_SPLITH:
@@ -1919,6 +1920,19 @@ Rect con_minimum_size(Con *con) {
         return (Rect){0, 0, width, height};
     }
 
+    if (con->layout == L_PREVIEW) {
+        uint32_t width = 0, height = 0;
+        Con *child;
+        TAILQ_FOREACH(child, &(con->nodes_head), nodes) {
+            Rect min = con_minimum_size(child);
+            height = max(height, min.height);
+            width = max(width, min.width);
+        }
+        width /= 0.8;
+        DLOG("preview container, returning width = %d x height = %d\n", width, height);
+        return (Rect){0, 0, width, height};
+    }
+
     ELOG("Unhandled case, type = %d, layout = %d, split = %d\n",
          con->type, con->layout, con_is_split(con));
     assert(false);
@@ -2117,6 +2131,8 @@ char *con_get_tree_representation(Con *con) {
         buf = sstrdup("U[");
     else if (con->layout == L_STACKED)
         buf = sstrdup("S[");
+    else if (con->layout == L_PREVIEW)
+        buf = sstrdup("P[");
     else {
         ELOG("BUG: Code not updated to account for new layout type\n");
         assert(false);

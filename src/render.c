@@ -19,6 +19,7 @@ static void render_con_stacked(Con *con, Con *child, render_params *p, int i);
 static void render_con_tabbed(Con *con, Con *child, render_params *p, int i);
 static void render_con_vtabbed(Con *con, Con *child, render_params *p, int i);
 static void render_con_dockarea(Con *con, Con *child, render_params *p);
+static void render_con_preview(Con *con, Con *child, render_params *p, int i);
 
 /*
  * Returns the height for the decorations
@@ -151,6 +152,8 @@ void render_con(Con *con, bool render_fullscreen) {
                 render_con_vtabbed(con, child, &params, i);
             } else if (con->layout == L_DOCKAREA) {
                 render_con_dockarea(con, child, &params);
+            } else if (con->layout == L_PREVIEW) {
+                render_con_preview(con, child, &params, i);
             }
 
             DLOG("child at (%d, %d) with (%d x %d)\n",
@@ -504,4 +507,34 @@ static void render_con_dockarea(Con *con, Con *child, render_params *p) {
     child->deco_rect.width = 0;
     child->deco_rect.height = 0;
     p->y += child->rect.height;
+}
+static void render_con_preview(Con * con, Con * child, render_params *p, int i) {
+    assert(con->layout == L_PREVIEW);
+    if(p->children <= 1){
+        child->rect.x = p->x;
+        child->rect.y = p->y;
+        child->rect.width = p->rect.width;
+        child->rect.height = p->rect.height;
+    } else {
+        int width = p->rect.width / (1+p->children);
+        if(TAILQ_FIRST(&(con->focus_head)) == child) {
+            child->rect.x = p->x;
+            child->rect.y = p->y;
+            child->rect.width = p->rect.width - width;
+            child->rect.height = p->rect.height;
+        } else {
+            child->rect.x = p->x + p->rect.width - width;
+            child->rect.y = p->y + p->rect.height/p->children * i;
+            child->rect.width = width;
+            if(i < p->children - 1)
+                child->rect.height = p->rect.height/p->children;
+            else
+                child->rect.height = p->rect.height - p->rect.height/p->children * i;
+        }
+    }
+    
+    child->deco_rect.x = 0;
+    child->deco_rect.y = 0;
+    child->deco_rect.width = 0;
+    child->deco_rect.height = 0;
 }

@@ -323,6 +323,9 @@ void dump_node(yajl_gen gen, struct Con *con, bool inplace_restart) {
         case L_DOCKAREA:
             ystr("dockarea");
             break;
+        case L_PREVIEW:
+            ystr("preview");
+            break;
         case L_OUTPUT:
             ystr("output");
             break;

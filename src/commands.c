@@ -554,6 +554,7 @@ static bool cmd_resize_tiling_width_height(I3_CMD, Con *current, const char *way
     LOG("width/height resize\n");
     /* get the appropriate current container (skip stacked/tabbed cons) */
     while (current->parent->layout == L_STACKED ||
+           current->parent->layout == L_VTABBED ||
            current->parent->layout == L_TABBED)
         current = current->parent;
 
@@ -1505,6 +1506,8 @@ void cmd_layout(I3_CMD, const char *layout_str) {
         layout = L_SPLITV;
     else if (strcmp(layout_str, "splith") == 0)
         layout = L_SPLITH;
+    else if (strcmp(layout_str, "preview") == 0)
+        layout = L_PREVIEW;
     else {
         ELOG("Unknown layout \"%s\", this is a mismatch between code and parser spec.\n", layout_str);
         return;

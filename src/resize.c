@@ -67,7 +67,8 @@ bool resize_find_tiling_participants(Con **current, Con **other, direction_t dir
         if ((con_orientation(first->parent) != search_orientation) ||
             (first->parent->layout == L_STACKED) ||
             (first->parent->layout == L_VTABBED) ||
-            (first->parent->layout == L_TABBED)) {
+            (first->parent->layout == L_TABBED)  ||
+            (first->parent->layout == L_PREVIEW)) {
             first = first->parent;
             continue;
         }

@@ -96,7 +96,8 @@ typedef enum {
     L_OUTPUT = 4,
     L_SPLITV = 5,
     L_SPLITH = 6,
-    L_VTABBED = 7
+    L_VTABBED = 7,
+    L_PREVIEW = 8
 } layout_t;
 
 /**

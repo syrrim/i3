@@ -343,6 +343,8 @@ static int json_string(void *ctx, const unsigned char *val, size_t len) {
                 json_node->layout = L_SPLITH;
             else if (strcasecmp(buf, "splitv") == 0)
                 json_node->layout = L_SPLITV;
+            else if (strcasecmp(buf, "preview") == 0)
+                json_node->layout = L_PREVIEW;
             else
                 LOG("Unhandled \"layout\": %s\n", buf);
             free(buf);
@@ -357,6 +359,8 @@ static int json_string(void *ctx, const unsigned char *val, size_t len) {
                 json_node->workspace_layout = L_TABBED;
             else if (strcasecmp(buf, "vtabbed") == 0)
                 json_node->workspace_layout = L_VTABBED;
+            else if (strcasecmp(buf, "preview") == 0)
+                json_node->workspace_layout = L_PREVIEW;
             else
                 LOG("Unhandled \"workspace_layout\": %s\n", buf);
             free(buf);
